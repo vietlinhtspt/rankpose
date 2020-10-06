@@ -1,0 +1,5 @@
+2020-10-06 09:15:39,616 train 81 [DEBUG][main] {'Net': {'net_type': 'ResNet', 'n_class': 3}, 'Data': {'target_size': 224}, 'Train': {'max_epoch': 80, 'batch_size': 16, 'num_workers': 4, 'test_every': 5, 'resume': False, 'pretrained_path': None}, 'Loss': {'loss_type': 'RANK'}, 'Optimizer': {'mode': 'adam', 'base_lr': 0.0001, 't_max': 10}}
+2020-10-06 09:15:39,616 train 82 [INFO][main] Device: cuda
+2020-10-06 09:15:39,616 train 83 [INFO][main] Max Epoch: 80
+2020-10-06 09:16:27,395 train 167 [INFO][main] Epoch: 0
+2020-10-06 09:16:27,395 train 168 [INFO][main] Learning rate: 0.0001
