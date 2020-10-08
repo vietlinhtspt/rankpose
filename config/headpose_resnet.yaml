@@ -14,11 +14,18 @@ Train:
   max_epoch: 80
   batch_size: 16
   num_workers: 4
-  test_every: 5
+  test_every: 1
   resume: False
   pretrained_path:
   use_bined: False
   use_rank: True
+
+  resume: True
+# Evaluate:
+#   eval_dir: "../data"
+#   eval_datasets: [{'val_name': 'aflw2000_filename.txt', 'val_type': 'AFLW2000'}, {'val_name': 'biwi_dataset_list.txt', 'val_type': 'BIWI'}]
+#   target_size: 224
+
 Loss:
   loss_type: 'RANK'
 Optimizer:

@@ -40,6 +40,11 @@ class BIWIDataset(Dataset):
                 if True and (abs(pose[0])>99 or abs(pose[1])>99 or abs(pose[2])>99):
                     continue
 
+                img_path = self.base_dir / ls[0]
+                if not (os.path.exists(img_path)):
+                    print(f"[INFO] File not exists: {img_path}")
+                    continue
+
                 if use_bined:
                     yaw_pitch_bins = np.array([-60, -40, -20, 20, 40, 60])
                     roll_bins = np.array(range(-81, 82, 9))

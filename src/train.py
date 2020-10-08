@@ -96,6 +96,7 @@ def main():
             start_epoch = len(diff_history)
             for _ in range(start_epoch):
                 scheduler.step()
+
     else:
         start_epoch = 0
         best_metrics = float('inf')
@@ -134,10 +135,12 @@ def main():
     train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=True, drop_last=True)
     valid_loader = DataLoader(valid_dataset, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=True)
 
+    if torch.cuda.is_available():
+        model = nn.DataParallel(model)
 
     # Pretrained model
     if pretrained_path:
-        logger.info(f'Resume from {pretrained_path}')
+        logger.info(f'Load pretrained from {pretrained_path}')
         param = torch.load(pretrained_path, map_location='cpu')
         if "state_dict" in param:
             model.load_state_dict(param['state_dict'], strict=False)
@@ -147,18 +150,17 @@ def main():
 
     # Restore model
     if resume:
-        model_path = output_dir.joinpath(f'model_tmp.pth')
+        print("[INFO] resume training.")
+        model_path = output_dir.joinpath(f'model_epoch_{start_epoch-1}.pth')
         logger.info(f'Resume from {model_path}')
         param = torch.load(model_path, map_location='cpu')
         model.load_state_dict(param)
         del param
-        opt_path = output_dir.joinpath(f'opt_tmp.pth')
+        opt_path = output_dir.joinpath(f'opt_epoch_{start_epoch-1}.pth')
         param = torch.load(opt_path)
         optimizer.load_state_dict(param)
         del param
 
-    if torch.cuda.is_available():
-        model = nn.DataParallel(model)
 
     file_train_log = open("file_train_log.txt", "a")
     file_val_log = open("file_val_log.txt", "a")
@@ -243,8 +245,8 @@ def main():
         logger.info(f'train diff: {train_diff}')
         file_train_log.write(f"{train_loss},{train_diff}")
 
-        torch.save(model.module.state_dict(), output_dir.joinpath(f'model_tmp_epoch_{i_epoch}.pth'))
-        torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_tmp_{i_epoch}.pth'))
+        # torch.save(model.module.state_dict(), output_dir.joinpath(f'model_tmp_epoch_{i_epoch}.pth'))
+        # torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_tmp_{i_epoch}.pth'))
 
         if (i_epoch + 1) % test_every == 0:
             valid_losses = []
@@ -275,7 +277,7 @@ def main():
 
                             diff = calculate_diff(preds, labels)
                         
-                        _tqdm.set_postfix(OrderedDict(loss=f'{loss.item():.3f}', mae=f'{diff:.2f}'))
+                        _tqdm.set_postfix(OrderedDict(mae=f'{diff:.2f}'))
                         # _tqdm.set_postfix(OrderedDict(loss=f'{loss.item():.3f}', d_y=f'{np.mean(diff[:,0]):.1f}', d_p=f'{np.mean(diff[:,1]):.1f}', d_r=f'{np.mean(diff[:,2]):.1f}'))
                         valid_losses.append(0)
                         valid_diffs.append(diff)
@@ -289,8 +291,17 @@ def main():
             if best_metrics >= valid_diff:
                 best_metrics = valid_diff
                 logger.info('Best Model!\n')
-                torch.save(model.state_dict(), output_dir.joinpath('model.pth'))
-                torch.save(optimizer.state_dict(), output_dir.joinpath('opt.pth'))
+                torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
+                torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_epoch_{i_epoch}_{valid_diff}.pth'))
+            elif len(valid_diffs) > 9:
+                if (valid_diff < max(valid_diffs[-9:])):
+                    logger.info("Best in 10 last models.\n")
+                    torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
+                    torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_epoch_{i_epoch}_{valid_diff}.pth'))
+            elif (i_epoch >= 85):
+                torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
+                torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_epoch_{i_epoch}_{valid_diff}.pth'))
+
         else:
             valid_loss = None
             valid_diff = None
