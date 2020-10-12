@@ -19,6 +19,7 @@ from torch.utils.data import DataLoader
 from utils.metrics import calculate_diff
 from utils.optimizer import create_optimizer
 from torch.utils.data.sampler import  WeightedRandomSampler
+from glob import glob
 
 seed = 2020
 np.random.seed(seed)
@@ -46,86 +47,93 @@ def main():
     use_bined = False
     num_workers = 4
 
-    pretrained_path = "/home/linhnv/projects/RankPose/model/headpose_resnet/model_epoch_16_3.7488180603803625.pth"
+    pretrained_path = ["/home/linhnv/projects/RankPose/model/headpose_resnet/model_epoch_77_8.775894704750192.pth"]
 
-    model = load_model(**net_config)
-    # To device
-    model = model.to(device)
+    # models_path = glob("/home/linhnv/projects/RankPose/model/headpose_resnet/*")
+    # models_path = [x for x in models_path if x.startswith("/home/linhnv/projects/RankPose/model/headpose_resnet/model_epoch")]
+    # print(models_path)
+    for pretrained_path in pretrained_path:
+        print(f"[INFO] Pretrained path: {pretrained_path}")
 
-    modelname = config_path.stem
-    output_dir = Path('../model') / modelname
-    output_dir.mkdir(exist_ok=True)
-    log_dir = Path('../logs') / modelname
-    log_dir.mkdir(exist_ok=True)
+        model = load_model(**net_config)
+        # To device
+        model = model.to(device)
 
-    logger = debug_logger(log_dir)
-    logger.debug(config)
-    logger.info(f'Device: {device}')
-  
+        modelname = config_path.stem
+        output_dir = Path('../model') / modelname
+        output_dir.mkdir(exist_ok=True)
+        log_dir = Path('../logs') / modelname
+        log_dir.mkdir(exist_ok=True)
 
-    params = model.parameters()
+        # logger = debug_logger(log_dir)
+        # logger.debug(config)
+        # logger.info(f'Device: {device}')
     
 
-    valid_dataset = laod_dataset(data_type=val_type, split='valid', base_dir=val_dir, filename=val_name, 
-                            use_bined=False, n_class=n_class)
+        params = model.parameters()
+        
 
-    # top_10 = len(train_dataset) // 10
-    # top_30 = len(train_dataset) // 3.33
-    # train_weights = [ 3 if idx<top_10 else 2 if idx<top_30 else 1 for idx in train_dataset.labels_sort_idx]
-    # train_sample = WeightedRandomSampler(train_weights, num_samples=len(train_dataset), replacement=True)
+        valid_dataset = laod_dataset(data_type=val_type, split='valid', base_dir=val_dir, filename=val_name, 
+                                use_bined=False, n_class=n_class)
 
-    # train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sample, num_workers=num_workers,
-    #                           pin_memory=True, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=True)
+        # top_10 = len(train_dataset) // 10
+        # top_30 = len(train_dataset) // 3.33
+        # train_weights = [ 3 if idx<top_10 else 2 if idx<top_30 else 1 for idx in train_dataset.labels_sort_idx]
+        # train_sample = WeightedRandomSampler(train_weights, num_samples=len(train_dataset), replacement=True)
 
-    if torch.cuda.is_available():
-        model = nn.DataParallel(model)
+        # train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sample, num_workers=num_workers,
+        #                           pin_memory=True, drop_last=True)
+        valid_loader = DataLoader(valid_dataset, batch_size=32, shuffle=False, num_workers=num_workers, pin_memory=True)
 
-    logger.info(f'Load pretrained from {pretrained_path}')
-    param = torch.load(pretrained_path, map_location='cpu')
-    if "state_dict" in param:
-        model.load_state_dict(param['state_dict'], strict=False)
-    else:
-        model.load_state_dict(param)
-    del param
+        if torch.cuda.is_available():
+            model = nn.DataParallel(model)
 
-    valid_losses = []
-    valid_diffs = []
-    model.eval()
-    with torch.no_grad():
-        with tqdm(valid_loader) as _tqdm:
-            for batched in _tqdm:
-                if use_bined:
-                    images, labels, yaw_labels, pitch_labels, roll_labels = batched
-                
-                    images, labels = images.to(device), labels.to(device)
-                    # yaw_labels, pitch_labels, roll_labels = yaw_labels.to(device), pitch_labels.to(device), roll_labels.to(device)
+        # logger.info(f'Load pretrained from {pretrained_path}')
+        param = torch.load(pretrained_path, map_location='cpu')
+        if "state_dict" in param:
+            model.load_state_dict(param['state_dict'], strict=False)
+        else:
+            model.load_state_dict(param)
+        del param
 
-                    preds, y_pres, p_pres, r_pres = model(images, use_bined)
-                
-                    # loss = loss_fn([preds, y_pres, p_pres, r_pres], [labels, yaw_labels, pitch_labels, roll_labels])
+        valid_losses = []
+        valid_diffs = []
+        model.eval()
+        with torch.no_grad():
+            with tqdm(valid_loader) as _tqdm:
+                for batched in _tqdm:
+                    if use_bined:
+                        images, labels, yaw_labels, pitch_labels, roll_labels = batched
+                    
+                        images, labels = images.to(device), labels.to(device)
+                        # yaw_labels, pitch_labels, roll_labels = yaw_labels.to(device), pitch_labels.to(device), roll_labels.to(device)
 
-                    diff = calculate_diff(preds, labels)
-                else:
-                    images, labels = batched
-                
-                    images, labels = images.to(device), labels.to(device)
+                        preds, y_pres, p_pres, r_pres = model(images, use_bined)
+                    
+                        # loss = loss_fn([preds, y_pres, p_pres, r_pres], [labels, yaw_labels, pitch_labels, roll_labels])
 
-                    preds = model(images, use_bined)
-                
-                    # loss = loss_fn([preds], [labels])
+                        diff = calculate_diff(preds, labels)
+                    else:
+                        images, labels = batched
+                    
+                        images, labels = images.to(device), labels.to(device)
 
-                    diff = calculate_diff(preds, labels)
-                
-                _tqdm.set_postfix(OrderedDict(mae=f'{diff:.2f}'))
-                # _tqdm.set_postfix(OrderedDict(loss=f'{loss.item():.3f}', d_y=f'{np.mean(diff[:,0]):.1f}', d_p=f'{np.mean(diff[:,1]):.1f}', d_r=f'{np.mean(diff[:,2]):.1f}'))
-                valid_losses.append(0)
-                valid_diffs.append(diff)
+                        preds = model(images, use_bined)
+                    
+                        # loss = loss_fn([preds], [labels])
 
-    valid_loss = np.mean(valid_losses)
-    valid_diff = np.mean(valid_diffs)
-    logger.info(f'valid seg loss: {valid_loss}')
-    logger.info(f'valid diff: {valid_diff}')
+                        diff = calculate_diff(preds, labels)
+                    
+                    _tqdm.set_postfix(OrderedDict(mae=f'{diff:.2f}'))
+                    # _tqdm.set_postfix(OrderedDict(loss=f'{loss.item():.3f}', d_y=f'{np.mean(diff[:,0]):.1f}', d_p=f'{np.mean(diff[:,1]):.1f}', d_r=f'{np.mean(diff[:,2]):.1f}'))
+                    valid_losses.append(0)
+                    valid_diffs.append(diff)
+
+        valid_loss = np.mean(valid_losses)
+        valid_diff = np.mean(valid_diffs)
+        print(f'valid diff: {valid_diff}')
+        # logger.info(f'valid seg loss: {valid_loss}')
+        # logger.info(f'valid diff: {valid_diff}')
 
 if __name__=='__main__':
     main()

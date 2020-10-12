@@ -136,7 +136,7 @@ class Rank300wDataset(Dataset):
 
         if self.debug:
             print(label)
-            return img1, img2
+            return img1, img2, lbl1, lbl2
         else:
             img1 = preprocess(img1)
             img1 = torch.FloatTensor(img1).permute(2, 0, 1)
@@ -156,7 +156,7 @@ if __name__ == '__main__':
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-    from utils.custum_aug import Rotate
+    from dataset.draw import draw_axis
 
     affine_augmenter = None
     image_augmenter = albu.Compose([albu.GaussNoise((0, 25), p=.5),
@@ -168,22 +168,25 @@ if __name__ == '__main__':
                                     albu.CLAHE(p=0.1),
                                     albu.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=20, val_shift_limit=20,p=0.2),
                                     ])
-    dataset = Rank300wDataset(base_dir="data", affine_augmenter=affine_augmenter, image_augmenter=image_augmenter,
+    dataset = Rank300wDataset(base_dir="../../data", affine_augmenter=affine_augmenter, image_augmenter=image_augmenter,
                              filename='300w_lp_for_rank.txt', split='train', target_size=64, debug=True)
     dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
     print(len(dataset))
 
     for i, batched in enumerate(dataloader):
-        img1, img2 = batched
+        img1, img2 , lbl1, lbl2= batched
+        print(lbl1)
         for j in range(8):
             img = img1[j].numpy()
             img = img.astype('uint8')
+            img = draw_axis(img, lbl1[j][0], lbl1[j][1], lbl1[j][2])
             img = Image.fromarray(img)
-            img.save('tmp/img1_%d_%d.jpg'%(i, j))
+            img.save('/home/linhnv/projects/RankPose/data/Sample_300W_LP/img1_%d_%d.jpg'%(i, j))
             img = img2[j].numpy()
             img = img.astype('uint8')
+            img = draw_axis(img, lbl2[j][0], lbl2[j][1], lbl2[j][2])
             img = Image.fromarray(img)
-            img.save('tmp/img2_%d_%d.jpg'%(i, j))
+            img.save('/home/linhnv/projects/RankPose/data/Sample_300W_LP/img2_%d_%d.jpg'%(i, j))
         if i > 2:
             break
 

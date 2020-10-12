@@ -20,7 +20,7 @@ Train:
   use_bined: False
   use_rank: True
 
-  resume: True
+  # resume: True
 # Evaluate:
 #   eval_dir: "../data"
 #   eval_datasets: [{'val_name': 'aflw2000_filename.txt', 'val_type': 'AFLW2000'}, {'val_name': 'biwi_dataset_list.txt', 'val_type': 'BIWI'}]

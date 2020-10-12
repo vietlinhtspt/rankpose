@@ -28,6 +28,8 @@ class ResNet(nn.Module):
         
         self.dropout = nn.Dropout(0.2)
         if self.use_norm:
+            print("-----------------------------")
+            print("n_class: ", type(n_class))
             self.w = nn.Parameter(torch.Tensor(2048, n_class))
         else:
             self.fc_angles = nn.Linear(2048, n_class)

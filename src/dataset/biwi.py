@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader, Dataset
 from utils.preprocess import preprocess, change_bbox
 from albumentations.augmentations import functional as F
 from utils.functional import get_pt_ypr_from_mat, euler2quat
+from math import cos, radians, sin
 
 class BIWIDataset(Dataset):
     def __init__(self, base_dir=None, split='train', affine_augmenter=None, image_augmenter=None, 
@@ -79,6 +80,7 @@ class BIWIDataset(Dataset):
         img = np.array(Image.open(img_path).crop(bbox))
 
         label = self.labels[index].copy()
+        label[1] = - label[1]
         if self.use_bined:
             bined_label = self.euler_binned[index].copy()
 
@@ -126,6 +128,7 @@ class BIWIDataset(Dataset):
             print(self.img_paths[index], label)
         else:
             img = preprocess(img)
+            # BRG => RGB
             img = img.transpose(2, 0, 1)
             img = torch.FloatTensor(img)
             label = torch.FloatTensor(label)
@@ -134,12 +137,10 @@ class BIWIDataset(Dataset):
         else:
             return img, label
 
-
 if __name__ == '__main__':
     import matplotlib
     matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-    from utils.custum_aug import Rotate
+    from dataset.draw import draw_axis
 
     affine_augmenter = None
     image_augmenter = albu.Compose([albu.GaussNoise((0, 25), p=.5),
@@ -151,21 +152,23 @@ if __name__ == '__main__':
                                     albu.CLAHE(p=0.1),
                                     albu.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=20, val_shift_limit=20,p=0.2),
                                     ])
-    dataset = BIWIDataset(base_dir="kinect_head_pose_db", affine_augmenter=affine_augmenter, image_augmenter=image_augmenter,
+    dataset = BIWIDataset(base_dir="../../data", affine_augmenter=affine_augmenter, image_augmenter=image_augmenter,
                              filename='biwi_dataset_list.txt', split='val', target_size=224, n_class=3, debug=True)
     dataloader = DataLoader(dataset, batch_size=8, shuffle=False)
     print(len(dataset))
 
     for i, batched in enumerate(dataloader):
         images, labels = batched
-        print()
+
         for j in range(8):
             img = images[j].numpy()
             img = img.astype('uint8')
-            # img = Image.fromarray(img)
-        #     img.save('tmp/%d_%d.jpg'%(i, j))
-        # if i > 2:
-        #     break
+
+            img = draw_axis(img, labels[j][0], labels[j][1], labels[j][2])
+            img = Image.fromarray(img)
+            img.save('/home/linhnv/projects/RankPose/data/Sample_BIWI_Rankpose/%d_%d.jpg'%(i, j))
+        if i > 2:
+            break
 
             cv2.imshow("img", img)
             cv2.waitKey(0)

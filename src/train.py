@@ -93,7 +93,8 @@ def main():
             best_metrics = history_dict['best_metrics']
             loss_history = history_dict['loss']
             diff_history = history_dict['diff']
-            start_epoch = len(diff_history)
+            # start_epoch = len(diff_history)
+            start_epoch = 47
             for _ in range(start_epoch):
                 scheduler.step()
 
@@ -293,14 +294,9 @@ def main():
                 logger.info('Best Model!\n')
                 torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
                 torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_epoch_{i_epoch}_{valid_diff}.pth'))
-            elif len(valid_diffs) > 9:
-                if (valid_diff < max(valid_diffs[-9:])):
-                    logger.info("Best in 10 last models.\n")
-                    torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
-                    torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_epoch_{i_epoch}_{valid_diff}.pth'))
-            elif (i_epoch >= 85):
-                torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
-                torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_epoch_{i_epoch}_{valid_diff}.pth'))
+            
+            torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
+            torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_epoch_{i_epoch}_{valid_diff}.pth'))
 
         else:
             valid_loss = None
