@@ -40,7 +40,7 @@ class Criterion(nn.Module):
             
             angles_loss = self.criterion(preds[0],labels[0]) + self.criterion(preds[1],labels[1])
             
-            return 0.5 * angles_loss + 0.5  * rank_loss + 0.1 * class_loss
+            return angles_loss + rank_loss + 0.1 * class_loss
         elif use_bined:
             angles_loss = self.criterion(preds[0],labels[0])
 
